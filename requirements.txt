@@ -1,0 +1,4 @@
+networkx==3.4.2
+openai==1.54.0
+python-dotenv==1.0.1
+streamlit==1.40.0
