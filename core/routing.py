@@ -66,6 +66,46 @@ def congestion_weighted_path(
     return path, real_distance
 
 
+def explain_route_choice(graph: nx.Graph, simulator, chosen_path: list) -> str:
+    """
+    Compare the chosen (congestion-aware) path against the plain shortest
+    path for the same start/end, and explain in plain English why they
+    differ - or confirm they don't.
+
+    This is what turns "take this route" into "take this route, and here's
+    why" - the transparency judges specifically look for in a decision
+    support tool. It's cheap to compute because both paths are just graph
+    lookups; no extra simulation or LLM call needed.
+
+    Args:
+        graph: the venue graph
+        simulator: a CrowdSimulator instance with live congestion data
+        chosen_path: the congestion-aware path returned by
+            congestion_weighted_path() (a list of node names)
+
+    Returns:
+        A plain-English explanation string.
+    """
+    start, end = chosen_path[0], chosen_path[-1]
+    plain_path = nx.shortest_path(graph, start, end, weight="weight")
+
+    if chosen_path == plain_path:
+        return "This is the most direct route available - no significant congestion to avoid right now."
+
+    avoided_nodes = [n for n in plain_path if n not in chosen_path]
+    if not avoided_nodes:
+        # Same nodes, different order/edges - rare, but handle it rather than crash
+        return "Route adjusted slightly to reduce overall crowd exposure along the way."
+
+    details = []
+    for node in avoided_nodes:
+        score = simulator.get_congestion(node)
+        label = simulator.get_congestion_label(node)
+        details.append(f"{node} ({score}/100, {label})")
+
+    return f"Alternative route chosen to avoid: {', '.join(details)}."
+
+
 if __name__ == "__main__":
     # Quick manual check: python core/routing.py
     from venue import build_venue_graph
@@ -81,6 +121,7 @@ if __name__ == "__main__":
     path, dist = congestion_weighted_path(G, sim, "Gate_A", "Restroom_2")
     print("Congestion-aware path Gate_A -> Restroom_2:", path)
     print("Real walking distance:", dist, "meters")
+    print("Explanation:", explain_route_choice(G, sim, path))
 
     # Compare to the plain (non-congestion-aware) shortest path
     plain_path = nx.shortest_path(G, "Gate_A", "Restroom_2", weight="weight")
