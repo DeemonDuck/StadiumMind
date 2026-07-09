@@ -52,3 +52,40 @@ stadiummind/
 - [x] **Step 8** — `explain_route_choice()` added to `core/routing.py`. Compares the congestion-aware path against the plain shortest path and names exactly which node(s) were avoided and their congestion score, e.g. *"Alternative route chosen to avoid: Restroom_1 (83/100, critical)."* Free to compute (just a graph diff, no extra simulation or LLM call). Wired into `agents/fan_agent.py` so both mock and real LLM output can reference the actual reason instead of a generic "avoids crowds" line.
 - [x] **Step 9** — `core/incidents.py`: structured `Incident` dataclass (description, location, severity, timestamp) replacing plain incident strings, plus `sort_by_urgency()` (highest severity first, oldest first among ties). `agents/organizer_agent.py` rewritten to take a list of `Incident` objects and the venue graph, and produce **structured, priority-ranked output** (Priority 1 / Priority 2, with a simulated "estimated congestion reduction %" and real "affected areas" pulled from the worst node's actual graph neighbors) instead of loose sentences. `app.py`'s incident reporting is now a proper form (description/location/severity) instead of one text box, with an urgency-sorted incident log displayed live.
 - [x] Test suite expanded to **13 tests** (added coverage for `explain_route_choice` and the `Incident`/`sort_by_urgency` logic). All passing.
+- [x] **Step 10** — `core/graph_layout.py`: `compute_layout()` positions all 22 nodes for visualization (has zero effect on routing logic - purely cosmetic). The 8 sections are fixed on a circle to preserve the recognizable concourse-ring shape; everything else (gates, amenities, medical/parking/etc.) is placed automatically via `networkx.spring_layout` anchored around those fixed points, with a fixed seed so the map doesn't jump between reruns. Verified by printing all 22 computed positions - sections form a clean circle, satellites spread out sensibly.
+- [x] **Step 11** — `core/visualization.py`: `build_congestion_figure()` - a Plotly network graph with nodes color-coded by the same 🟢/🟡/🟠/🔴 congestion bands used everywhere else, and (on the Fan tab) the chosen route highlighted as a thick blue line on top of the base map. Couldn't render a static PNG preview in this sandbox (no Chrome for kaleido), but that's irrelevant to the actual app - Streamlit renders Plotly directly in-browser via plotly.js, not kaleido.
+- [x] **Step 12** — Predictive trends added to `core/crowd_sim.py`: each node now keeps a short rolling history (last 6 ticks), with `get_trend()` (% change over that window) and `estimate_ticks_to_critical()` (linear extrapolation to the critical threshold). **Documented assumption:** a tick is treated as one simulated time-step, described as "~1 minute" in demo narration - not a real elapsed-time measurement. Wired into `agents/organizer_agent.py` so both mock and real LLM recommendations can say things like *"Gate_A is up 22% recently"* instead of just a static number.
+- [x] **Step 13** — `app.py` rebuilt around `@st.fragment(run_every="3s")` for the live congestion panel (map + trend metrics + manual tick/incident buttons). This was the key design decision for auto-refresh: because the timer only reruns that fragment, not the whole page, the incident report form sitting right below it is **never** wiped out mid-typing - solving the exact risk flagged yesterday, without needing a workaround toggle. Verified `st.fragment(run_every=...)` has been stable since Streamlit 1.37 (mid-2024), well before the pinned 1.40.0. Top-4 congestion metrics now show a trend arrow (`delta`, `delta_color="inverse"` since rising congestion is bad) plus an ETA-to-critical caption where applicable.
+- [x] Fixed a `use_container_width` deprecation warning (Streamlit is phasing it out in favor of `width=`) caught during testing - updated all `st.button`/`st.plotly_chart` calls.
+- [x] Test suite expanded to **17 tests** (added coverage for `get_trend` and `estimate_ticks_to_critical`). All passing. Also ran the actual button-click flows through Streamlit's `AppTest` (not just a syntax check) for both tabs - logging a structured incident + getting a recommendation, and getting fan directions with the map - to confirm no runtime exceptions in the real interaction paths, not just on initial load.
+
+
+## Setup & Run
+
+```bash
+# 1. Create and activate a virtual environment
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac/Linux
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Set up your API key (optional — app works in mock mode without it)
+cp .env.example .env
+# then edit .env and paste your real GROQ_API_KEY (free, no card - console.groq.com)
+
+# 4. Run it
+streamlit run app.py
+```
+
+Without a key in `.env`, both agents automatically run in **mock mode** (clearly labeled `[MOCK RESPONSE ...]` in the UI) — the full app, routing, and UI all work, just without live AI-generated phrasing. Add a real key any time and it switches over automatically, no code changes.
+
+Run tests any time with:
+```bash
+python -m pytest tests/test_core.py -v
+# or, without pytest installed:
+python tests/test_core.py
+```
+
+---
