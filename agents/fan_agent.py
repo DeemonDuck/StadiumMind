@@ -4,18 +4,20 @@ agents/fan_agent.py
 The "navigation + multi-language" half of StadiumMind. Given a fan's
 current location and destination, finds a congestion-aware route (via
 core.routing) and asks an LLM to phrase it as short, friendly directions
-in the fan's chosen language.
+in the fan's chosen language - explicitly referencing WHY that route was
+chosen, not just what it is.
 
 MOCK MODE:
 If no GROQ_API_KEY is found, falls back to an untranslated template
-response instead of crashing. The route itself is always REAL (routing
-doesn't need the LLM) - only the friendly phrasing/translation is mocked.
-Once GROQ_API_KEY is set in .env, this automatically switches over.
+response instead of crashing. The route and its explanation are always
+REAL (routing/explanation logic doesn't need the LLM) - only the friendly
+phrasing/translation is mocked. Once GROQ_API_KEY is set in .env, this
+automatically switches over.
 """
 
 import os
 from dotenv import load_dotenv
-from core.routing import congestion_weighted_path
+from core.routing import congestion_weighted_path, explain_route_choice
 
 load_dotenv()
 
@@ -28,31 +30,32 @@ if GROQ_API_KEY and GROQ_API_KEY != "your_groq_api_key_here":
     _client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
 
 
-def _build_prompt(path: list, distance: float, language: str) -> str:
+def _build_prompt(path: list, distance: float, language: str, explanation: str) -> str:
     """Build the LLM prompt. Separate function so it can be tweaked/tested in isolation."""
     path_description = " -> ".join(path)
     return f"""A fan at a stadium wants directions to their destination.
-The recommended route (already chosen to avoid crowded areas) is:
+The recommended route is:
 {path_description}
 Total approximate distance: {distance:.0f} meters.
+Reason this specific route was chosen: {explanation}
 
 Write these directions as 2-3 short, friendly, easy-to-follow sentences,
-in {language}. Mention that this route avoids the busiest areas."""
+in {language}. Naturally work in why this route was chosen, based on the reason given - don't just say "avoids crowds" generically."""
 
 
-def _mock_directions(path: list, distance: float, language: str) -> str:
+def _mock_directions(path: list, distance: float, language: str, explanation: str) -> str:
     """
     PLACEHOLDER used only when no GROQ_API_KEY is configured.
 
-    The route (path/distance) is always real - only the friendly phrasing
-    and translation are mocked, since those genuinely need the LLM.
-    Clearly labeled so it's never mistaken for real AI output.
+    The route, distance, and explanation are always real - only the
+    friendly phrasing and translation are mocked, since those genuinely
+    need the LLM. Clearly labeled so it's never mistaken for real output.
     """
     path_description = " -> ".join(path)
     return (
         "[MOCK RESPONSE - add a real GROQ_API_KEY to .env for AI-written, translated directions]\n"
-        f"Head this way: {path_description}. "
-        f"Approx {distance:.0f} meters. This route avoids the most crowded areas right now.\n"
+        f"Head this way: {path_description}. Approx {distance:.0f} meters.\n"
+        f"Why this route: {explanation}\n"
         f"(Requested language: {language} - mock mode does not translate.)"
     )
 
@@ -69,15 +72,19 @@ def get_fan_directions(graph, simulator, start: str, destination: str, language:
         language: language to phrase the directions in
 
     Returns:
-        (directions_text, path): human-readable directions (real or mock),
-        and the raw list of node names, useful for debugging/display.
+        (directions_text, path, explanation):
+            - directions_text: human-readable directions (real or mock)
+            - path: the raw list of node names, for display/debugging
+            - explanation: plain-English reason the route was chosen
+              (always real, computed independently of mock/LLM mode)
     """
     path, distance = congestion_weighted_path(graph, simulator, start, destination)
+    explanation = explain_route_choice(graph, simulator, path)
 
     if _client is None:
-        return _mock_directions(path, distance, language), path
+        return _mock_directions(path, distance, language, explanation), path, explanation
 
-    prompt = _build_prompt(path, distance, language)
+    prompt = _build_prompt(path, distance, language, explanation)
     try:
         response = _client.chat.completions.create(
             model=MODEL,
@@ -85,9 +92,13 @@ def get_fan_directions(graph, simulator, start: str, destination: str, language:
             max_tokens=200,
             temperature=0.5,
         )
-        return response.choices[0].message.content, path
+        return response.choices[0].message.content, path, explanation
     except Exception as e:
-        return f"[AI temporarily unavailable: {e}]\n" + _mock_directions(path, distance, language), path
+        return (
+            f"[AI temporarily unavailable: {e}]\n" + _mock_directions(path, distance, language, explanation),
+            path,
+            explanation,
+        )
 
 
 if __name__ == "__main__":
@@ -100,6 +111,7 @@ if __name__ == "__main__":
     sim.trigger_incident("Section_1", spike=70)
     sim.trigger_incident("Restroom_1", spike=70)
 
-    text, path = get_fan_directions(G, sim, "Gate_A", "Restroom_2", language="Hindi")
+    text, path, explanation = get_fan_directions(G, sim, "Gate_A", "Restroom_2", language="Hindi")
     print(text)
     print("Path:", path)
+    print("Explanation:", explanation)
