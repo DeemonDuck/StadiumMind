@@ -18,12 +18,16 @@ the real Groq API - no code changes needed anywhere else.
 from __future__ import annotations  # allows `dict | None` etc. on Python < 3.10
 
 import os
+import streamlit as st
 from dotenv import load_dotenv
 from core.incidents import sort_by_urgency
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Local dev reads from .env via os.getenv. Streamlit Community Cloud
+# doesn't deploy .env files - it injects secrets via st.secrets instead.
+# Check both so the same code works in both environments.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
 MODEL = "llama-3.3-70b-versatile"  # stronger reasoning model - good fit for triage/prioritization
 
 # Only create the API client if a real key is present. This means the
