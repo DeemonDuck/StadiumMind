@@ -15,6 +15,8 @@ Once GROQ_API_KEY is set in .env, this automatically switches to calling
 the real Groq API - no code changes needed anywhere else.
 """
 
+from __future__ import annotations  # allows `dict | None` etc. on Python < 3.10
+
 import os
 from dotenv import load_dotenv
 from core.incidents import sort_by_urgency

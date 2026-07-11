@@ -20,6 +20,8 @@ real elapsed-time measurement). For demo narration we describe a tick as
 sensor sampling rate.
 """
 
+from __future__ import annotations  # allows `int | None` etc. on Python < 3.10
+
 import random
 from collections import deque
 

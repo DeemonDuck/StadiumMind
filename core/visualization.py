@@ -9,7 +9,16 @@ shown - the chosen path is highlighted directly on the map.
 Positions are computed once via core.graph_layout.compute_layout() and
 passed in here, rather than recomputed - this keeps the map visually
 stable across reruns instead of jumping around.
+
+ACCESSIBILITY NOTE: congestion status is never conveyed by color alone.
+Every node's visible label includes its numeric score (not just the
+color), and app.py additionally renders a plain-text/table view of the
+same data alongside the map - Plotly's canvas rendering isn't reliably
+readable by screen readers, so the table is the real accessible
+equivalent, not just a nice-to-have.
 """
+
+from __future__ import annotations  # allows `list | None` etc. on Python < 3.10
 
 import plotly.graph_objects as go
 
@@ -86,11 +95,14 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
         x, y = positions[node]
         node_x.append(x)
         node_y.append(y)
+        score = simulator.get_congestion(node)
         label = simulator.get_congestion_label(node)
         node_color.append(CONGESTION_COLORS[label])
         node_size.append(NODE_TYPE_SIZE.get(data.get("type"), 18))
-        node_text.append(node.replace("_", " "))
-        hover_text.append(f"{node} - {simulator.get_congestion(node)}/100 ({label})")
+        # Score is shown in the visible label itself, not just on hover -
+        # so it doesn't depend on color perception or a mouseover/tap.
+        node_text.append(f"{node.replace('_', ' ')}<br>{score}")
+        hover_text.append(f"{node} - {score}/100 ({label})")
 
     traces.append(
         go.Scatter(
