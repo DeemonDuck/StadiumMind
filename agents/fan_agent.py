@@ -16,12 +16,16 @@ automatically switches over.
 """
 
 import os
+import streamlit as st
 from dotenv import load_dotenv
 from core.routing import congestion_weighted_path, explain_route_choice
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Local dev reads from .env via os.getenv. Streamlit Community Cloud
+# doesn't deploy .env files - it injects secrets via st.secrets instead.
+# Check both so the same code works in both environments.
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
 MODEL = "llama-3.1-8b-instant"  # fast model - plenty for short directions/translation
 
 _client = None
