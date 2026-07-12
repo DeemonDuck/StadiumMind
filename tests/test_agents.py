@@ -168,6 +168,34 @@ def test_get_transit_directions_runs_in_mock_mode_without_a_key():
     assert recommended.mode == "metro"  # metro is greenest at every named gate
 
 
+def test_translate_task_description_is_a_noop_for_english():
+    """English is the source language of every Task.description - no LLM
+    call needed, so callers can invoke this unconditionally."""
+    description = "Redirect or assist foot traffic at Gate_A (82/100 congestion)"
+    assert fan_agent.translate_task_description(description, "English") == description
+
+
+def test_build_task_translation_prompt_includes_description_and_language():
+    prompt = fan_agent._build_task_translation_prompt("Respond to: Medical situation", "French")
+    assert "French" in prompt
+    assert "Medical situation" in prompt
+
+
+def test_mock_task_translation_includes_original_description():
+    translation = fan_agent._mock_task_translation("Respond to: Medical situation", "Hindi")
+    assert "Medical situation" in translation
+    assert "[MOCK" in translation
+    assert "Hindi" in translation
+
+
+def test_translate_task_description_runs_in_mock_mode_without_a_key():
+    description = "Redirect or assist foot traffic at Gate_A (82/100 congestion)"
+    translated = fan_agent.translate_task_description(description, "Spanish")
+    assert isinstance(translated, str) and len(translated) > 0
+    assert "[MOCK" in translated
+    assert description in translated
+
+
 if __name__ == "__main__":
     # Allows running directly with `python tests/test_agents.py` without pytest installed
     import traceback
