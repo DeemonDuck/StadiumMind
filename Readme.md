@@ -5,6 +5,8 @@
 Built for the PromptWars 2026 "Smart Stadiums & Tournament Operations" challenge.
 
 ![Tests](https://github.com/DeemonDuck/StadiumMind/actions/workflows/tests.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-lightgrey)
 
 ---
 
@@ -61,6 +63,7 @@ flowchart TD
 **🦺 Volunteer & Staff Board**
 - Assignable task cards generated directly from live congestion hotspots and open incidents — the same data the Organizer Agent reasons over, presented as a to-do list instead of a paragraph
 - Assign a name and track status (Open → Assigned → Resolved) per task; refreshing the board adds new tasks without touching ones already assigned
+- Task descriptions can be translated on demand (English, Hindi, Spanish, French) — the same translate-with-mock-fallback pattern the Fan Assistant uses, so a Cup-scale international volunteer team isn't left with an English-only board
 
 **♿ Accessibility**
 - Every congestion score is shown as visible text, not conveyed by color alone
@@ -82,7 +85,7 @@ The brief names eight themes and four groups to help. Every one is covered:
 | Accessibility | Text equivalents for every visual element |
 | Operational intelligence | Organizer Agent's structured recommendations |
 | Real-time decision support | Auto-refreshing dashboard + priority-ranked actions |
-| Multilingual assistance | 4-language directions and transit comparisons |
+| Multilingual assistance | 4-language directions/transit comparisons (Fan Assistant) + translated task cards (Volunteer & Staff Board) |
 | Transportation | "Getting to the Stadium" transit comparison |
 | Sustainability | CO₂-per-trip estimates + session-wide savings tracker |
 
