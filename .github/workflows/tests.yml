@@ -34,6 +34,16 @@ jobs:
       - name: Run test suite
         run: pytest tests/ -v
 
+      - name: Coverage report
+        # Only on 3.12 (matches the deploy target) - avoids printing the
+        # same report three times across the matrix. Scoped to core/ and
+        # agents/ (the modules the test suite actually targets) rather than
+        # the whole repo, so the % reflects real coverage, not a number
+        # dragged down by app.py's Streamlit UI wiring, which isn't unit
+        # tested (see BUILD_LOG.md - that's currently verified manually).
+        if: matrix.python-version == '3.12'
+        run: pytest tests/ --cov=core --cov=agents --cov-report=term-missing
+
   lint:
     runs-on: ubuntu-latest
     steps:
