@@ -1,0 +1,35 @@
+# Pre-commit hooks - runs the same checks as CI's `lint` job, locally,
+# before a commit is made. Versions pinned to match requirements-dev.txt
+# exactly, so "passes locally" and "passes in CI" mean the same thing.
+#
+# Setup (one-time, per clone):
+#   pip install pre-commit
+#   pre-commit install
+#
+# After that it runs automatically on `git commit`. Run it manually against
+# everything (e.g. before pushing) with: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.21  # matches ruff==0.15.21 in requirements-dev.txt
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.2.0  # matches mypy==2.2.0 in requirements-dev.txt
+    hooks:
+      - id: mypy
+        # additional_dependencies so mypy resolves real signatures where
+        # available instead of running against an empty isolated env -
+        # same runtime deps as requirements.txt (numpy pin included, for
+        # the same PEP 695 stub-syntax reason documented in pyproject.toml).
+        additional_dependencies:
+          - "numpy<2.4"
+          - "networkx==3.2.1"
+          - "openai==2.45.0"
+          - "python-dotenv==1.0.1"
+          - "streamlit==1.51.0"
+          - "plotly==5.24.1"
+        pass_filenames: false
+        args: ["."]
