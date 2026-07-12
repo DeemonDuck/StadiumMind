@@ -17,9 +17,11 @@ automatically switches over.
 
 import os
 
+import networkx as nx
 import streamlit as st
 from dotenv import load_dotenv
 
+from core.crowd_sim import CrowdSimulator
 from core.routing import congestion_weighted_path, explain_route_choice
 from core.transport import TransitOption, get_transit_options, recommend_greenest_option
 
@@ -84,7 +86,9 @@ def _mock_directions(path: list, distance: float, language: str, explanation: st
     )
 
 
-def get_fan_directions(graph, simulator, start: str, destination: str, language: str = "English"):
+def get_fan_directions(
+    graph: nx.Graph, simulator: CrowdSimulator, start: str, destination: str, language: str = "English"
+) -> tuple[str, list[str], str]:
     """
     Main entry point used by app.py.
 
@@ -172,7 +176,7 @@ def _mock_transit_summary(gate: str, options: list, recommended: TransitOption, 
     )
 
 
-def get_transit_directions(gate: str, language: str = "English"):
+def get_transit_directions(gate: str, language: str = "English") -> tuple[str, list[TransitOption], TransitOption]:
     """
     Main entry point for the transportation + sustainability feature: this
     is the "how do I get to the stadium" mode of the Fan Assistant, distinct
@@ -219,6 +223,76 @@ def get_transit_directions(gate: str, language: str = "English"):
         )
 
 
+def _build_task_translation_prompt(description: str, language: str) -> str:
+    """Build the LLM prompt for translating a single volunteer/staff task
+    description. Separate function so it can be tweaked/tested in
+    isolation, same pattern as _build_prompt() and _build_transit_prompt()
+    above."""
+    return f"""Translate the following volunteer/staff task instruction into {language}.
+Keep it short and clear - a volunteer reads this on a task board, not a
+paragraph of prose. Preserve place/location names exactly as written
+(e.g. "Gate_A", "Section_1") - do not translate them.
+
+Task: {description}
+
+Respond with ONLY the translated task text, nothing else."""
+
+
+def _mock_task_translation(description: str, language: str) -> str:
+    """
+    PLACEHOLDER used only when no GROQ_API_KEY is configured.
+
+    Same approach as _mock_directions()/_mock_transit_summary() above: the
+    task text itself is always real - only the translation is mocked.
+    """
+    return f"[MOCK - {language} translation unavailable without a GROQ_API_KEY] {description}"
+
+
+def translate_task_description(description: str, language: str = "English") -> str:
+    """
+    Translate a single Volunteer & Staff Board task description (see
+    core/tasks.py) into the requested language.
+
+    Reuses the exact same translate-with-mock-fallback pattern as
+    get_fan_directions()/get_transit_directions() above, so the Volunteer &
+    Staff Board's multilingual support (app.py, tab 3) is one more view
+    over this agent rather than a second, separately-maintained translation
+    path - ties the board into the same multilingual story as the Fan
+    Assistant instead of leaving it English-only.
+
+    Args:
+        description: the English task description (from core.tasks.Task)
+        language: language to translate into. "English" is a no-op and
+            skips the LLM call entirely, since the source text already IS
+            English - callers can call this unconditionally without
+            special-casing the default language themselves.
+
+    Returns:
+        Translated text (real or mock, per MOCK MODE rules above), or the
+        original description unchanged when language == "English".
+    """
+    if language == "English":
+        return description
+
+    if _client is None:
+        return _mock_task_translation(description, language)
+
+    prompt = _build_task_translation_prompt(description, language)
+    try:
+        response = _client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100,
+            temperature=0.3,
+        )
+        content = response.choices[0].message.content
+        if content is None:
+            return _mock_task_translation(description, language)
+        return content.strip()
+    except OpenAIError as e:
+        return f"[AI temporarily unavailable: {e}]\n" + _mock_task_translation(description, language)
+
+
 if __name__ == "__main__":
     # Quick manual check - run from project root with: python -m agents.fan_agent
     from core.crowd_sim import CrowdSimulator
@@ -238,3 +312,6 @@ if __name__ == "__main__":
     print("\n--- Transit comparison ---")
     print(transit_text)
     print("Recommended:", greenest.mode, f"(saves {greenest.co2_saved_vs_car_grams:.0f}g CO2)")
+
+    print("\n--- Task translation (Volunteer & Staff Board) ---")
+    print(translate_task_description("Redirect or assist foot traffic at Gate_A (82/100 congestion)", "Spanish"))
