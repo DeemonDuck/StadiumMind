@@ -108,8 +108,8 @@ def explain_route_choice(graph: nx.Graph, simulator, chosen_path: list) -> str:
 
 if __name__ == "__main__":
     # Quick manual check: python core/routing.py
-    from venue import build_venue_graph
     from crowd_sim import CrowdSimulator
+    from venue import build_venue_graph
 
     G = build_venue_graph()
     sim = CrowdSimulator(G, seed=1)
