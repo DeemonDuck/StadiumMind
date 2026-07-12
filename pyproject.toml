@@ -1,0 +1,48 @@
+[project]
+name = "stadiummind"
+version = "1.0.0"
+description = "GenAI-enabled architecture for Smart Stadiums & Tournament Operations (PromptWars 2026)"
+requires-python = ">=3.10"
+
+# ----------------------------------------------------------------------
+# Ruff (lint)
+# ----------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes (unused imports/vars, undefined names, etc.)
+    "B",      # flake8-bugbear (likely bugs / footguns)
+    "C4",     # flake8-comprehensions (unnecessary dict()/list() calls, etc.)
+    "I",      # isort (import ordering)
+    "UP",     # pyupgrade (modern Python idioms)
+    "SIM",    # flake8-simplify
+    "BLE",    # flake8-blind-except (catch specific exceptions, not bare Exception)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The tests/test_*.py `if __name__ == "__main__"` blocks each have a small
+# manual test-runner loop that intentionally catches any exception a test
+# raises so it can report PASS/FAIL per test and keep going - that's a
+# harness pattern, not the "swallowing real bugs" anti-pattern this rule
+# exists to catch (which is why agents/*.py narrows to OpenAIError instead
+# of ignoring the rule).
+"tests/*.py" = ["BLE001"]
+
+# ----------------------------------------------------------------------
+# Mypy (type checking)
+# ----------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true   # streamlit/networkx/plotly/openai/dotenv have incomplete/no stubs
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+# Intentionally not using strict/disallow_untyped_defs: this is a hackathon
+# MVP with type hints used where they add clarity (dataclasses, public
+# function signatures), not a fully-annotated codebase. check_untyped_defs
+# still catches real type errors inside unannotated functions.

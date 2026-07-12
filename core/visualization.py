@@ -67,7 +67,7 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
         go.Scatter(
             x=edge_x, y=edge_y,
             mode="lines",
-            line=dict(width=1, color="#cccccc"),
+            line={"width": 1, "color": "#cccccc"},
             hoverinfo="none",
             showlegend=False,
         )
@@ -76,7 +76,7 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
     # --- Highlighted route, if a fan path is being shown ---
     if highlight_path and len(highlight_path) > 1:
         hx, hy = [], []
-        for a, b in zip(highlight_path, highlight_path[1:]):
+        for a, b in zip(highlight_path, highlight_path[1:], strict=False):
             x0, y0 = positions[a]
             x1, y1 = positions[b]
             hx += [x0, x1, None]
@@ -84,7 +84,7 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
         traces.append(go.Scatter(
             x=hx, y=hy,
             mode="lines",
-            line=dict(width=4, color="#2980b9"),
+            line={"width": 4, "color": "#2980b9"},
             hoverinfo="none",
             showlegend=False,
         ))
@@ -110,19 +110,19 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
             mode="markers+text",
             text=node_text,
             textposition="bottom center",
-            textfont=dict(size=9),
+            textfont={"size": 9},
             hovertext=hover_text,
             hoverinfo="text",
-            marker=dict(size=node_size, color=node_color, line=dict(width=1, color="#333333")),
+            marker={"size": node_size, "color": node_color, "line": {"width": 1, "color": "#333333"}},
             showlegend=False,
         )
     )
 
     fig = go.Figure(data=traces)
     fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        margin={"l": 10, "r": 10, "t": 10, "b": 10},
+        xaxis={"showgrid": False, "zeroline": False, "showticklabels": False},
+        yaxis={"showgrid": False, "zeroline": False, "showticklabels": False},
         height=520,
         plot_bgcolor="rgba(0,0,0,0)",
     )
@@ -132,10 +132,10 @@ def build_congestion_figure(graph, simulator, positions: dict, highlight_path: l
 if __name__ == "__main__":
     # Quick manual check: python core/visualization.py
     # (writes an HTML file you can open to visually inspect the map)
-    from venue import build_venue_graph
     from crowd_sim import CrowdSimulator
     from graph_layout import compute_layout
     from routing import congestion_weighted_path
+    from venue import build_venue_graph
 
     G = build_venue_graph()
     sim = CrowdSimulator(G, seed=1)

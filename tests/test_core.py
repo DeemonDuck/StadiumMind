@@ -10,15 +10,15 @@ Run with: pytest tests/test_core.py -v
 (or just: python -m pytest)
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from core.venue import build_venue_graph, get_nodes_by_type
 from core.crowd_sim import CrowdSimulator
-from core.routing import congestion_weighted_path, explain_route_choice
 from core.incidents import Incident, sort_by_urgency
+from core.routing import congestion_weighted_path, explain_route_choice
+from core.venue import build_venue_graph, get_nodes_by_type
 
 
 def test_venue_graph_has_expected_nodes():
@@ -93,7 +93,10 @@ def test_congestion_aware_path_reroutes_around_a_real_incident():
 
     aware_path, _ = congestion_weighted_path(G, sim, "Gate_A", "Restroom_2")
 
-    assert aware_path != plain_path, "Congestion-aware path should differ from the plain shortest path once a node on it is heavily congested"
+    assert aware_path != plain_path, (
+        "Congestion-aware path should differ from the plain shortest path "
+        "once a node on it is heavily congested"
+    )
     assert "Restroom_1" not in aware_path, "Should route around the congested Restroom_1 node"
 
 
