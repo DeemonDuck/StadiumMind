@@ -19,7 +19,7 @@ Run with: streamlit run app.py
 
 import streamlit as st
 
-from agents.fan_agent import get_fan_directions, get_transit_directions
+from agents.fan_agent import get_fan_directions, get_transit_directions, translate_task_description
 from agents.organizer_agent import GROQ_API_KEY, get_organizer_recommendation
 from core.crowd_sim import CrowdSimulator
 from core.graph_layout import compute_layout
@@ -49,6 +49,13 @@ if "volunteer_tasks" not in st.session_state:
     # board merges in new tasks without wiping out an existing
     # assignment/status for a task that's still open.
     st.session_state.volunteer_tasks = {}
+if "task_translations" not in st.session_state:
+    # {(task_id, language): translated_description} - cached so the
+    # Volunteer & Staff Board's language selector (tab 3) doesn't re-call
+    # the LLM for a task already translated on every rerun (Streamlit
+    # reruns the whole script on every widget interaction, e.g. typing an
+    # assignee name or changing a status).
+    st.session_state.task_translations = {}
 if "total_co2_saved_grams" not in st.session_state:
     # Session-level sustainability counter, updated each time a fan uses
     # the "Getting to the Stadium" transit comparison in the Fan Assistant
@@ -303,20 +310,32 @@ with tab3:
         "(see core/tasks.py)."
     )
 
-    if st.button("🔄 Refresh Tasks from Current Conditions"):
-        fresh_tasks = generate_tasks_from_state(
-            st.session_state.get("latest_congestion", simulator.get_all()),
-            st.session_state.incidents,
+    board_col1, board_col2 = st.columns([2, 1])
+    with board_col1:
+        if st.button("🔄 Refresh Tasks from Current Conditions"):
+            fresh_tasks = generate_tasks_from_state(
+                st.session_state.get("latest_congestion", simulator.get_all()),
+                st.session_state.incidents,
+            )
+            added = 0
+            for task in fresh_tasks:
+                if task.id not in st.session_state.volunteer_tasks:
+                    st.session_state.volunteer_tasks[task.id] = task
+                    added += 1
+            if added:
+                st.toast(f"Added {added} new task(s) to the board.")
+            else:
+                st.toast("Board is already up to date - no new tasks.")
+    with board_col2:
+        # A FIFA World Cup deploys plenty of international volunteers -
+        # reuses the exact same translate-with-mock-fallback pattern as
+        # the Fan Assistant tab (agents/fan_agent.translate_task_description)
+        # so multilingual support covers this persona too, not just fans.
+        task_language = st.selectbox(
+            "Task language",
+            ["English", "Hindi", "Spanish", "French"],
+            key="task_board_language",
         )
-        added = 0
-        for task in fresh_tasks:
-            if task.id not in st.session_state.volunteer_tasks:
-                st.session_state.volunteer_tasks[task.id] = task
-                added += 1
-        if added:
-            st.toast(f"Added {added} new task(s) to the board.")
-        else:
-            st.toast("Board is already up to date - no new tasks.")
 
     tasks = sort_tasks_by_priority(list(st.session_state.volunteer_tasks.values()))
 
@@ -330,6 +349,13 @@ with tab3:
                 with card_col1:
                     badge = priority_badge.get(task.priority.upper(), "⚪")
                     st.markdown(f"{badge} **{task.description}**")
+                    if task_language != "English":
+                        cache_key = (task.id, task_language)
+                        if cache_key not in st.session_state.task_translations:
+                            st.session_state.task_translations[cache_key] = translate_task_description(
+                                task.description, task_language
+                            )
+                        st.caption(f"🌐 {st.session_state.task_translations[cache_key]}")
                     st.caption(f"📍 {task.location} · priority: {task.priority}")
                 with card_col2:
                     task.assigned_to = st.text_input(
