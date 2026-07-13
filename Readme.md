@@ -108,7 +108,8 @@ Python · Streamlit · NetworkX · Plotly · Groq (Llama 3.3 / 3.1)
 ```
 stadiummind/
 ├── core/
-│   ├── venue.py          # The stadium as a graph
+│   ├── venue.py           # The stadium as a graph
+│   ├── congestion.py      # The 0-100 scale: thresholds + label, one source for all of them
 │   ├── crowd_sim.py       # Live congestion + trend simulation
 │   ├── routing.py         # Congestion-aware pathfinding + route explanation
 │   ├── incidents.py       # Structured incident model
@@ -117,6 +118,7 @@ stadiummind/
 │   ├── graph_layout.py    # Positions nodes for visualization
 │   └── visualization.py   # Interactive Plotly congestion map
 ├── agents/
+│   ├── llm_client.py      # The one Groq client + the one call-with-mock-fallback policy
 │   ├── organizer_agent.py # Decision-support AI
 │   └── fan_agent.py       # Navigation + transit comparison + translation AI
 ├── app.py                 # Streamlit dashboard (3 tabs)
@@ -124,7 +126,7 @@ stadiummind/
 ├── requirements.txt
 ├── requirements-dev.txt   # pytest, ruff, mypy
 ├── .env.example
-└── tests/
+└── tests/                 # conftest.py pins mock mode - the suite never hits the network
 ```
 
 ---
@@ -168,6 +170,9 @@ python -m pytest tests/ -v
 ## Notes on Design Decisions
 
 - **Mock mode isn't a shortcut — it's a resilience feature.** Both agents degrade gracefully to data-driven mock responses if no key is configured or the API is briefly unavailable, so a live demo never just crashes.
+- **That resilience policy is written down exactly once.** Every LLM call in the project goes through a single `complete(prompt, ..., fallback)` in `agents/llm_client.py`, which owns all three ways a call can fail to produce usable text (no key, empty content, `OpenAIError`). It used to be copy-pasted into all four call sites — but the fallback *is* the resilience feature, so it's the last thing that should have four copies drifting apart.
+- **Congestion has one definition, not three.** The 0–100 thresholds live only in `core/congestion.py`. The map, the agents, and the task board all read from it, so they can't quietly disagree about what "critical" means.
+- **The test suite is hermetic.** `tests/conftest.py` pins mock mode, so the suite makes no network calls and passes identically whether or not the machine running it has a real API key — rather than being green only because CI happens to lack one.
 - **Congestion-aware routing uses a squared penalty**, not a linear one — mild congestion barely affects the route, but near-critical congestion is avoided hard. This was tuned empirically to reroute realistically without needing extreme parameter values.
 - **The venue's layout is computed, not hand-placed** — a small pure-Python algorithm positions every node relative to its neighbors, so the map stays sensible even as the venue graph grows.
 - **Volunteer/staff tasks are generated from data, not parsed from the Organizer Agent's LLM text.** Task cards come from a plain function over the same congestion/incident data the organizer agent reads — deterministic and independently testable, rather than fragile regex/parsing of a freeform AI paragraph.
