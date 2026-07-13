@@ -26,10 +26,16 @@ spring layout anyway - it's explicitly "ring, with satellites radiating
 outward from whatever they connect to," which is exactly the real layout.
 """
 
+from __future__ import annotations
+
 import hashlib
 import math
 
 import networkx as nx
+
+# {node_name: (x, y)} - purely for drawing the map; nothing in the routing or
+# congestion logic reads these.
+Positions = dict[str, tuple[float, float]]
 
 
 def _deterministic_fraction(s: str) -> float:
@@ -44,7 +50,7 @@ def _deterministic_fraction(s: str) -> float:
     return int(digest[:8], 16) / 0xFFFFFFFF
 
 
-def compute_layout(graph: nx.Graph) -> dict:
+def compute_layout(graph: nx.Graph) -> Positions:
     """
     Args:
         graph: the venue graph
@@ -53,7 +59,7 @@ def compute_layout(graph: nx.Graph) -> dict:
         {node_name: (x, y)} - fully deterministic, so the map doesn't
         visually jump around between reruns, sessions, or app restarts.
     """
-    positions = {}
+    positions: Positions = {}
 
     # --- Step 1: place the 8 sections on a fixed ring ---
     sections = [n for n, d in graph.nodes(data=True) if d.get("type") == "section"]

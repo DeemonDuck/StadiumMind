@@ -19,20 +19,21 @@ from __future__ import annotations  # allows `dict | None` etc. on Python < 3.10
 import networkx as nx
 
 from agents.llm_client import complete
-from core.congestion import congestion_label
-from core.incidents import sort_by_urgency
+from core.congestion import CongestionSnapshot, congestion_label
+from core.crowd_sim import Trends
+from core.incidents import Incident, sort_by_urgency
 
 MODEL = "llama-3.3-70b-versatile"  # stronger reasoning model - good fit for triage/prioritization
 
 
-def _format_incidents(incidents: list) -> str:
+def _format_incidents(incidents: list[Incident]) -> str:
     """Format a list of Incident objects (already urgency-sorted) for the prompt."""
     if not incidents:
         return "None reported"
     return "\n".join(inc.to_prompt_line() for inc in incidents)
 
 
-def _trend_phrase(trends: dict | None, node: str) -> str:
+def _trend_phrase(trends: Trends | None, node: str) -> str:
     """
     Turn a node's trend info into a short natural-language fragment, e.g.
     ", up 18% recently, projected to reach critical in ~3 more updates".
@@ -58,7 +59,7 @@ def _trend_phrase(trends: dict | None, node: str) -> str:
     return ", " + " and ".join(parts) if parts else ""
 
 
-def _format_trends_for_prompt(congestion_snapshot: dict, trends: dict | None) -> str:
+def _format_trends_for_prompt(congestion_snapshot: CongestionSnapshot, trends: Trends | None) -> str:
     """Format trend info for every node that has a meaningful trend, for the LLM prompt."""
     if not trends:
         return "No trend data available."
@@ -70,7 +71,7 @@ def _format_trends_for_prompt(congestion_snapshot: dict, trends: dict | None) ->
     return "\n".join(lines) if lines else "No significant trends right now."
 
 
-def _build_prompt(congestion_snapshot: dict, incidents: list, trends: dict | None) -> str:
+def _build_prompt(congestion_snapshot: CongestionSnapshot, incidents: list[Incident], trends: Trends | None) -> str:
     """
     Build the LLM prompt from current state. Kept as its own function so
     the prompt can be tweaked or unit-tested independently of the API call.
@@ -102,7 +103,12 @@ Priority 2 (only include if there's a genuine second issue - an incident or a se
 Keep it concise and actionable - this will be read by staff during a live event, not analyzed later."""
 
 
-def _mock_recommendation(graph: nx.Graph, congestion_snapshot: dict, incidents: list, trends: dict | None) -> str:
+def _mock_recommendation(
+    graph: nx.Graph,
+    congestion_snapshot: CongestionSnapshot,
+    incidents: list[Incident],
+    trends: Trends | None,
+) -> str:
     """
     PLACEHOLDER used only when no GROQ_API_KEY is configured.
 
@@ -153,9 +159,9 @@ def _mock_recommendation(graph: nx.Graph, congestion_snapshot: dict, incidents: 
 
 def get_organizer_recommendation(
     graph: nx.Graph,
-    congestion_snapshot: dict,
-    incidents: list | None = None,
-    trends: dict | None = None,
+    congestion_snapshot: CongestionSnapshot,
+    incidents: list[Incident] | None = None,
+    trends: Trends | None = None,
 ) -> str:
     """
     Main entry point used by app.py.
@@ -193,5 +199,5 @@ if __name__ == "__main__":
     G = build_venue_graph()
     sample_congestion = {"Gate_A": 85, "Gate_B": 30, "Section_2": 60}
     sample_incidents = [Incident("Medical situation", "Gate_A", "HIGH")]
-    sample_trends = {"Gate_A": {"trend_pct": 22, "eta_ticks": None}}
+    sample_trends: Trends = {"Gate_A": {"trend_pct": 22, "eta_ticks": None}}
     print(get_organizer_recommendation(G, sample_congestion, sample_incidents, sample_trends))

@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import agents.fan_agent as fan_agent
 import agents.organizer_agent as organizer_agent
+from core.crowd_sim import Trends
 from core.incidents import Incident
 from core.transport import get_transit_options, recommend_greenest_option
 from core.venue import build_venue_graph
@@ -48,19 +49,20 @@ def test_organizer_format_incidents_includes_each_incident_line():
 
 
 def test_organizer_trend_phrase_empty_when_no_trend_data():
+    other_node: Trends = {"Gate_B": {"trend_pct": 20}}
     assert organizer_agent._trend_phrase({}, "Gate_A") == ""
-    assert organizer_agent._trend_phrase({"Gate_B": {"trend_pct": 20}}, "Gate_A") == ""
+    assert organizer_agent._trend_phrase(other_node, "Gate_A") == ""
 
 
 def test_organizer_trend_phrase_mentions_upward_trend():
-    trends = {"Gate_A": {"trend_pct": 22, "eta_ticks": 3}}
+    trends: Trends = {"Gate_A": {"trend_pct": 22, "eta_ticks": 3}}
     phrase = organizer_agent._trend_phrase(trends, "Gate_A")
     assert "up 22%" in phrase
     assert "3 more updates" in phrase
 
 
 def test_organizer_trend_phrase_mentions_already_critical():
-    trends = {"Gate_A": {"trend_pct": 10, "eta_ticks": 0}}
+    trends: Trends = {"Gate_A": {"trend_pct": 10, "eta_ticks": 0}}
     phrase = organizer_agent._trend_phrase(trends, "Gate_A")
     assert "already at critical level" in phrase
 

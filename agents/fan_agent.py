@@ -26,7 +26,7 @@ from core.transport import TransitOption, get_transit_options, recommend_greenes
 MODEL = "llama-3.1-8b-instant"  # fast model - plenty for short directions/translation
 
 
-def _build_prompt(path: list, distance: float, language: str, explanation: str) -> str:
+def _build_prompt(path: list[str], distance: float, language: str, explanation: str) -> str:
     """Build the LLM prompt. Separate function so it can be tweaked/tested in isolation."""
     path_description = " -> ".join(path)
     return f"""A fan at a stadium wants directions to their destination.
@@ -40,7 +40,7 @@ in {language}. Naturally work in why this route was chosen, based on the
 reason given - don't just say "avoids crowds" generically."""
 
 
-def _mock_directions(path: list, distance: float, language: str, explanation: str) -> str:
+def _mock_directions(path: list[str], distance: float, language: str, explanation: str) -> str:
     """
     PLACEHOLDER used only when no GROQ_API_KEY is configured.
 
@@ -90,7 +90,9 @@ def get_fan_directions(
     return directions, path, explanation
 
 
-def _build_transit_prompt(gate: str, options: list, recommended: TransitOption, language: str) -> str:
+def _build_transit_prompt(
+    gate: str, options: list[TransitOption], recommended: TransitOption, language: str
+) -> str:
     """Build the LLM prompt for the transit-comparison feature. Separate
     function so it can be tweaked/tested in isolation, same pattern as
     _build_prompt() above."""
@@ -110,7 +112,9 @@ recommending the greenest one. Naturally work in the actual CO2 savings number
 as the reason - don't just say "it's eco-friendly" generically."""
 
 
-def _mock_transit_summary(gate: str, options: list, recommended: TransitOption, language: str) -> str:
+def _mock_transit_summary(
+    gate: str, options: list[TransitOption], recommended: TransitOption, language: str
+) -> str:
     """
     PLACEHOLDER used only when no GROQ_API_KEY is configured.
 

@@ -52,7 +52,7 @@ class Incident:
         return self.to_prompt_line()
 
 
-def sort_by_urgency(incidents: list) -> list:
+def sort_by_urgency(incidents: list[Incident]) -> list[Incident]:
     """
     Sort incidents most-urgent-first: highest severity first, and among
     equal severities, the oldest (longest unresolved) first.

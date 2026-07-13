@@ -24,8 +24,9 @@ import networkx as nx
 import plotly.graph_objects as go
 
 from core.crowd_sim import CrowdSimulator
+from core.graph_layout import Positions
 
-CONGESTION_COLORS = {
+CONGESTION_COLORS: dict[str, str] = {
     "low": "#2ecc71",       # green
     "moderate": "#f1c40f",  # yellow
     "high": "#e67e22",      # orange
@@ -34,7 +35,7 @@ CONGESTION_COLORS = {
 
 # Slightly bigger markers for the more "structural" node types (gates,
 # sections) so the ring shape reads clearly at a glance; amenities smaller.
-NODE_TYPE_SIZE = {
+NODE_TYPE_SIZE: dict[str, int] = {
     "gate": 22,
     "section": 26,
     "amenity": 16,
@@ -47,7 +48,10 @@ NODE_TYPE_SIZE = {
 
 
 def build_congestion_figure(
-    graph: nx.Graph, simulator: CrowdSimulator, positions: dict, highlight_path: list | None = None
+    graph: nx.Graph,
+    simulator: CrowdSimulator,
+    positions: Positions,
+    highlight_path: list[str] | None = None,
 ) -> go.Figure:
     """
     Args:

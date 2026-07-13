@@ -24,10 +24,31 @@ from __future__ import annotations  # allows `int | None` etc. on Python < 3.10
 
 import random
 from collections import deque
+from typing import TypedDict
 
 import networkx as nx
 
-from core.congestion import CRITICAL_THRESHOLD, congestion_label
+from core.congestion import CRITICAL_THRESHOLD, CongestionSnapshot, congestion_label
+
+
+class TrendInfo(TypedDict, total=False):
+    """
+    One node's trend snapshot: the pair of numbers app.py builds per node from
+    get_trend() and estimate_ticks_to_critical(), and hands to the organizer
+    agent so its recommendations can say "up 22% recently" instead of just
+    quoting a static score.
+
+    total=False because callers legitimately supply only part of it - a node
+    that's flat or cooling has no meaningful eta_ticks, and the agent's
+    _trend_phrase() is written to say nothing rather than invent a number.
+    """
+
+    trend_pct: int
+    eta_ticks: int | None
+
+
+# {node_name: that node's TrendInfo}
+Trends = dict[str, TrendInfo]
 
 
 class CrowdSimulator:
@@ -49,9 +70,9 @@ class CrowdSimulator:
         if seed is not None:
             random.seed(seed)
         # Every location starts at a random low-to-moderate congestion level
-        self.congestion = {node: random.randint(10, 30) for node in graph.nodes}
+        self.congestion: CongestionSnapshot = {node: random.randint(10, 30) for node in graph.nodes}
         # Rolling history per node - starts with just the initial value
-        self.history = {
+        self.history: dict[str, deque[int]] = {
             node: deque([score], maxlen=self.HISTORY_LENGTH)
             for node, score in self.congestion.items()
         }
@@ -89,7 +110,7 @@ class CrowdSimulator:
         """Return the current congestion score (0-100) for a single node."""
         return self.congestion.get(node, 0)
 
-    def get_all(self) -> dict:
+    def get_all(self) -> CongestionSnapshot:
         """Return a snapshot of congestion for every node, as {node: score}."""
         return dict(self.congestion)
 

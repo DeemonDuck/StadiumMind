@@ -28,8 +28,8 @@ from __future__ import annotations  # allows `str | None` etc. on Python < 3.10
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from core.congestion import CRITICAL_THRESHOLD, HIGH_THRESHOLD
-from core.incidents import SEVERITY_LEVELS
+from core.congestion import CRITICAL_THRESHOLD, HIGH_THRESHOLD, CongestionSnapshot
+from core.incidents import SEVERITY_LEVELS, Incident
 
 TASK_STATUSES = ["OPEN", "ASSIGNED", "RESOLVED"]
 
@@ -71,8 +71,8 @@ def sort_tasks_by_priority(tasks: list[Task]) -> list[Task]:
 
 
 def generate_tasks_from_state(
-    congestion_snapshot: dict,
-    incidents: list,
+    congestion_snapshot: CongestionSnapshot,
+    incidents: list[Incident],
     congestion_threshold: int = DEFAULT_CONGESTION_THRESHOLD,
 ) -> list[Task]:
     """

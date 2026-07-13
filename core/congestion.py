@@ -26,11 +26,19 @@ means.
 Anything that needs to interpret a congestion score should import from here.
 """
 
+from __future__ import annotations
+
 # A score at or above each threshold earns that label. Ordered high -> low,
 # which is also the order congestion_label() tests them in.
 CRITICAL_THRESHOLD = 75
 HIGH_THRESHOLD = 50
 MODERATE_THRESHOLD = 25
+
+# {node_name: score 0-100} - what CrowdSimulator.get_all() hands out, and what
+# the agents, the task board and the map all read. Named because it's passed
+# across nearly every module boundary in the project; "dict" said nothing about
+# which dict, and there are several in play (trends, positions, translations).
+CongestionSnapshot = dict[str, int]
 
 
 def congestion_label(score: int) -> str:

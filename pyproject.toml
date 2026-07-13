@@ -56,6 +56,16 @@ check_untyped_defs = true
 # code where most "parameters" are widget return values from an
 # incompletely-stubbed library, so full annotation there is friction with
 # no real payoff.
+#
+# disallow_any_generics is what makes disallow_untyped_defs mean something.
+# Without it, a bare `dict` or `list` is a *fully annotated* signature as far
+# as mypy is concerned - it's implicitly dict[Any, Any] - so the check passed
+# while several signatures said nothing at all about what they took. There are
+# a few distinct dicts flying around this codebase (congestion snapshots,
+# trends, layout positions, task translations) and "dict" didn't distinguish
+# them; core/congestion.py and core/crowd_sim.py now name the real shapes
+# (CongestionSnapshot, Trends) and this setting keeps them from decaying back.
 [[tool.mypy.overrides]]
 module = ["core.*", "agents.*"]
 disallow_untyped_defs = true
+disallow_any_generics = true

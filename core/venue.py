@@ -125,7 +125,7 @@ def build_venue_graph() -> nx.Graph:
     return G
 
 
-def get_nodes_by_type(graph: nx.Graph, node_type: str) -> list:
+def get_nodes_by_type(graph: nx.Graph, node_type: str) -> list[str]:
     """
     Return all node names of a given type ("gate", "section", or "amenity").
     Useful for populating dropdowns in the UI, e.g. "pick your destination amenity".
