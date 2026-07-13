@@ -28,8 +28,6 @@ from __future__ import annotations  # allows `str | None` etc. on Python < 3.10
 from dataclasses import dataclass, field
 from datetime import datetime
 
-import networkx as nx
-
 from core.congestion import CRITICAL_THRESHOLD, HIGH_THRESHOLD
 from core.incidents import SEVERITY_LEVELS
 
@@ -75,7 +73,6 @@ def sort_tasks_by_priority(tasks: list[Task]) -> list[Task]:
 def generate_tasks_from_state(
     congestion_snapshot: dict,
     incidents: list,
-    graph: nx.Graph | None = None,
     congestion_threshold: int = DEFAULT_CONGESTION_THRESHOLD,
 ) -> list[Task]:
     """
@@ -90,9 +87,6 @@ def generate_tasks_from_state(
         congestion_snapshot: {node: score} as returned by
             CrowdSimulator.get_all()
         incidents: list of core.incidents.Incident
-        graph: accepted for future use (e.g. naming affected neighbors)
-            and API symmetry with agents/organizer_agent.py - not required
-            by the current logic.
         congestion_threshold: score at/above which a node gets a task
 
     Returns:
